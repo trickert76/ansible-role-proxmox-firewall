@@ -1,0 +1,2 @@
+proxmox_firewall:
+  path: /root

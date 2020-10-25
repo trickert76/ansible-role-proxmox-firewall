@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Thoralf Rickert-Wendt
+  description: A role for managing the Proxmox firewall
+  company: Acoby GmbH
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Debian
+      versions:
+        - buster
+  galaxy_tags:
+    - system
+    - networking
+    - security
+    - firewall
+    - pve

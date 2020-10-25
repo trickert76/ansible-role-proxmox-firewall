@@ -1,0 +1,25 @@
+[OPTIONS]
+
+policy_in: DROP
+enable: 1
+{% if (debug is defined) %}
+log_level_in: debug
+log_level_out: debug
+{% else %}
+log_level_in: nolog
+log_level_out: nolog
+{% endif %}
+
+[RULES]
+
+GROUP monitor
+GROUP ssh
+{% if (host in groups['vms']) %}
+GROUP kvm-nodes
+{% endif %}
+{% if (host in groups['mail']) %}
+GROUP kvm-mail-nodes
+{% endif %}
+{% if (host in groups['db']) %}
+GROUP kvm-database-nodes
+{% endif %}

@@ -1,0 +1,5 @@
+---
+- name: "reload pve-firewall"
+  service:
+    name: pve-firewall
+    state: reloaded

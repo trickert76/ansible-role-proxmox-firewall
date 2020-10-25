@@ -1,0 +1,23 @@
+# firewall configuration for Proxmox hosts
+---
+- name: Configure /etc/pve/firewall/cluster.fw
+  template:
+    src: "cluster.fw.j2"
+    dest: "{{ proxmox_firewall.path }}/cluster.fw"
+  register: "_pve_firewall_cluster_register"
+
+- name: Configure /etc/pve/firewall/xxx.fw
+  template:
+    src: "vm.fw.j2"
+    dest: "{{ proxmox_firewall.path }}/{{ hostvars[host].vmid }}.fw"
+  with_items:
+    - "{{ groups['vms'] }}"
+  register: "_pve_firewall_vm_register"
+  loop_control:
+    loop_var: host
+
+- name: "Reload pve-firewall"
+  service:
+    name: pve-firewall
+    state: reloaded
+  when: "_pve_firewall_cluster_register.changed or _pve_firewall_vm_register.changed"

@@ -1,0 +1,190 @@
+[OPTIONS]
+
+enable: 1
+
+[ALIASES]
+
+{% for host in groups['all']|sort %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4 {{ hostvars[host].network.ipv4.address }}/32 # {{ host }} 
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6 {{ hostvars[host].network.ipv6.address }}/{{ hostvars[host].network.ipv6.prefix }} # {{ host }}
+{% endif %}
+{% endfor %}
+
+[IPSET proxmox-hosts] # all proxmox hosts
+
+{% for host in groups['proxmox']|sort %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6
+{% endif %}
+{% endfor %}
+
+[IPSET gluster-hosts] # Gluster Cluster
+
+{% for host in groups['gluster']|sort %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6
+{% endif %}
+{% endfor %}
+
+[IPSET kvm-database-nodes] # all database nodes
+
+{% for host in groups['db']|sort %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6
+{% endif %}
+{% endfor %}
+
+[IPSET external-loadbalancer] # all loadbalancer
+
+{% for host in groups['loadbalancer']|sort %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6
+{% endif %}
+{% endfor %}
+
+[IPSET monitoring-nodes] # all monitoring nodes
+
+{% for host in groups['monitoring']|sort %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6
+{% endif %}
+{% endfor %}
+{% for host in groups['proxmox'] %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6
+{% endif %}
+{% endfor %}
+
+[IPSET site-network] # complete network
+
+{% for host in groups['all']|sort %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4
+{% if hostvars[host].network.ipv4.subnet is defined %}
+{% for subnet in hostvars[host].network.ipv4.subnet %}
+{{ subnet }} # {{ hostvars[host].inventory_hostname_short }}-ipv4-subnet 
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6
+{% if hostvars[host].network.ipv6.subnet is defined %}
+{% for subnet in hostvars[host].network.ipv6.subnet %}
+{{ subnet }} # {{ hostvars[host].inventory_hostname_short }}-ipv6-subnet 
+{% endfor %}
+{% endif %}
+{% endif %}
+{% endfor %}
+
+[IPSET kvm-nodes] # all vms
+
+{% for host in groups['vms']|sort %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6
+{% endif %}
+{% endfor %}
+
+[IPSET external-vpn-nodes] # all vpn entry points
+
+{% for host in groups['vpn']|sort %}
+{% if hostvars[host].network.ipv4 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v4
+{% endif %}
+{% if hostvars[host].network.ipv6 is defined %}
+{{ hostvars[host].inventory_hostname_short }}-v6
+{% endif %}
+{% endfor %}
+
+[RULES]
+
+GROUP proxmox
+
+[group kvm-database-nodes] # all db services
+
+IN MySQL(ACCEPT) -source +kvm-nodes -dest +kvm-database-nodes -log nolog # mariadb-client-access
+IN MySQL(ACCEPT) -source +kvm-database-nodes -dest +kvm-database-nodes -log nolog # mariadb-node-access
+IN ACCEPT -source +kvm-database-nodes -dest +kvm-database-nodes -p tcp -dport 4444 -log nolog # mariadb-galera-cluster
+IN ACCEPT -source +kvm-database-nodes -dest +kvm-database-nodes -p tcp -dport 4568 -log nolog # mariadb-galera-cluster
+IN ACCEPT -source +kvm-database-nodes -dest +kvm-database-nodes -p tcp -dport 4567 -log nolog # mariadb-galera-cluster
+IN PostgreSQL(ACCEPT) -source +kvm-nodes -dest +kvm-database-nodes -log nolog # postgres pool
+IN ACCEPT -source +kvm-database-nodes -dest +kvm-database-nodes -p tcp -dport 5433 -log nolog # postgres server
+IN ACCEPT -source +kvm-database-nodes -dest +kvm-database-nodes -p tcp -dport 9898 -log nolog # pgpool
+
+
+[group kvm-mail-nodes] # All mail services
+
+IN HTTPS(ACCEPT) -log nolog # webmail/admin-client-access
+IN HTTP(ACCEPT) -log nolog # webmail/admin-client-access
+IN POP3S(ACCEPT) -log nolog # pop3s-client-access
+IN POP3(ACCEPT) -log nolog # pop3-client-access
+IN IMAPS(ACCEPT) -log nolog # imaps-client-access
+IN IMAP(ACCEPT) -log nolog # imap-client-access
+IN Mail(ACCEPT) -log nolog # smtp/submission-client-access
+IN ACCEPT -p tcp -dport 4190 -log nolog # sieve-client-access
+
+[group monitor] # all monitoring nodes
+
+IN ACCEPT -source +monitoring-nodes -dest +site-network -p tcp -dport 5665 -log nolog # Icinga Master or Satellite
+IN ACCEPT -source +site-network -dest +monitoring-nodes -p tcp -dport 5665 -log nolog # Icinga Master or Satellite
+IN ACCEPT -source +monitoring-nodes -dest +proxmox-hosts -p tcp -dport {{ ansible_ssh_port }} -log nolog # SSH
+IN ACCEPT -source +monitoring-nodes -dest +site-network -p tcp -dport {{ ansible_ssh_port }} -log nolog # SSH
+IN Ping(ACCEPT) -source +monitoring-nodes -dest +site-network -log nolog # Ping
+
+[group proxmox] # HTTP 8006, SSH {{ ansible_ssh_port }}, DNS64
+
+IN ACCEPT -source +external-vpn-nodes -log nolog
+|IN Ceph(ACCEPT) -source +proxmox-hosts -dest +proxmox-hosts -log nolog # Ceph
+IN DNS(ACCEPT) -source +site-network -log nolog # DNS
+IN ACCEPT -source +proxmox-hosts -dest +proxmox-hosts -p tcp -dport {{ ansible_ssh_port }} -log nolog # SSH
+IN ACCEPT -source +external-vpn-nodes -dest +site-network -p tcp -dport {{ ansible_ssh_port }} -log nolog # SSH
+IN ACCEPT -source +kvm-nodes -dest +site-network -p tcp -dport {{ ansible_ssh_port }} -log nolog # SSH
+IN ACCEPT -source +proxmox-hosts -dest +proxmox-hosts -log nolog
+IN HTTP(ACCEPT) -dest +proxmox-hosts -log nolog # Letsencrypt
+|IN ACCEPT -dest +proxmox-hosts -p tcp -dport 8006 -log nolog # Proxmox Management Port
+IN ACCEPT -source +external-vpn-nodes -dest +proxmox-hosts -p tcp -dport 8006 -log nolog # Proxmox Management Port
+IN ACCEPT -source +proxmox-hosts -dest +proxmox-hosts -p tcp -dport 8006 -log nolog # Proxmox Management Port
+IN ACCEPT -source +kvm-nodes -dest +gluster-hosts -p tcp -dport 24007 -log nolog # GlusterFS
+IN ACCEPT -source +kvm-nodes -dest +gluster-hosts -p tcp -dport 49152 -log nolog # GlusterFS gv0
+IN ACCEPT -source +kvm-nodes -dest +gluster-hosts -p tcp -dport 49153 -log nolog # GlusterFS gv1
+IN ACCEPT -source +kvm-nodes -dest +gluster-hosts -p tcp -dport 49154 -log nolog # GlusterFS gv2
+IN ACCEPT -source +gluster-hosts -dest +gluster-hosts -p tcp -dport 24007 -log nolog # Gluster Communication
+IN ACCEPT -source +gluster-hosts -dest +gluster-hosts -p tcp -dport 49152 -log nolog # Gluster br0
+IN ACCEPT -source +gluster-hosts -dest +gluster-hosts -p tcp -dport 49153 -log nolog # Gluster br1
+IN ACCEPT -source +gluster-hosts -dest +gluster-hosts -p tcp -dport 49154 -log nolog # Gluster br2
+IN ACCEPT -source +site-network -dest +proxmox-hosts -p tcp -dport 5665 -log nolog # monitoring
+
+[group ssh] # SSH Port {{ ansible_ssh_port }}
+
+IN ACCEPT -source +site-network -dest +site-network -p tcp -dport {{ ansible_ssh_port }} -log nolog # SSH
+IN ACCEPT -source +site-network -dest +site-network -p tcp -dport 22 -log nolog # SSH
+
+[group kvm-nodes] # Service communication
+
+IN ACCEPT -source +external-vpn-nodes -dest +kvm-nodes -log nolog
+IN ACCEPT -source +proxmox-hosts -dest +kvm-nodes -log nolog
+IN ACCEPT -source +kvm-nodes -dest +kvm-nodes -log nolog
+IN ACCEPT -source +external-loadbalancer -dest +kvm-nodes -log nolog
